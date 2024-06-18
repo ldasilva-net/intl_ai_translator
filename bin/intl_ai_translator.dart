@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:intl_ai_translator/src/command_runner.dart';
+import '../lib/src/command_runner.dart';
 
 Future<void> main(List<String> args) async {
   await _flushThenExit(await IntlAiTranslatorCommandRunner().run(args));

@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:intl_ai_translator/src/command_runner.dart';
-import 'package:intl_ai_translator/src/commands/commands.dart';
-import 'package:intl_ai_translator/src/version.dart';
+import '../../../lib/src/command_runner.dart';
+import '../../../lib/src/commands/commands.dart';
+import '../../../lib/src/version.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:pub_updater/pub_updater.dart';

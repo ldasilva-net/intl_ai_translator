@@ -1,4 +1,4 @@
-import 'package:intl_ai_translator/src/command_runner.dart';
+import '../../../lib/src/command_runner.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
