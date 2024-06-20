@@ -9,12 +9,25 @@ class TranslateCommand extends Command<int> {
   TranslateCommand({
     required Logger logger,
   }) : _logger = logger {
-    argParser.addOption(
-      'api-key',
-      abbr: 'k',
-      help: 'Gemini API Key.',
-      mandatory: true,
-    );
+    argParser
+      ..addOption(
+        'l10n-path',
+        abbr: 'p',
+        help: 'Path to .arb files.',
+        mandatory: true,
+      )
+      ..addOption(
+        'main-lang',
+        abbr: 'l',
+        help: 'Main language code.',
+        mandatory: true,
+      )
+      ..addOption(
+        'api-key',
+        abbr: 'k',
+        help: 'Gemini API Key.',
+        mandatory: true,
+      );
   }
 
   @override
@@ -29,10 +42,12 @@ class TranslateCommand extends Command<int> {
 
   @override
   Future<int> run() async {
+    final l10nPath = argResults?['l10n-path'] as String?;
+    final mainLanguageCode = argResults?['main-lang'] as String?;
     final apiKey = argResults?['api-key'] as String?;
 
-    if (apiKey == null) {
-      _logger.err('Option api-key is mandatory');
+    if (l10nPath == null || mainLanguageCode == null || apiKey == null) {
+      _logger.err('You need to set the mandatory options');
       return ExitCode.software.code;
     }
 
@@ -41,12 +56,16 @@ class TranslateCommand extends Command<int> {
       apiKey: apiKey,
     );
 
-    _logger.progress('Starting translation...');
+    _logger.info(
+      'Starting translation with config\n'
+      '- Path: $l10nPath\n'
+      '- Main lang: $mainLanguageCode\n',
+    );
 
     try {
-      await _replaceTranslations(
-        '/Users/ldasilva/workspace/ai_squiz/lib/l10n/intl_en.arb',
-        '/Users/ldasilva/workspace/ai_squiz/lib/l10n/intl_es_AR.arb',
+      await _translateFiles(
+        l10nPath,
+        mainLanguageCode,
       );
     } catch (error) {
       _logger.err('$error');
@@ -54,61 +73,76 @@ class TranslateCommand extends Command<int> {
       return ExitCode.software.code;
     }
 
-    _logger.success('Done!');
+    _logger.info('\nDone!');
 
     return ExitCode.success.code;
   }
 
-  Future<void> _replaceTranslations(
-    String refFilePath,
-    String targetFilePath,
+  Future<void> _translateFiles(
+    String l10nPath,
+    String mainLanguageCode,
   ) async {
-    final referenceContent = jsonDecode(File(refFilePath).readAsStringSync())
-        as Map<String, dynamic>;
+    final l10nFiles = Directory(l10nPath).listSync().whereType<File>().toList();
 
-    final targetContent = jsonDecode(File(targetFilePath).readAsStringSync())
-        as Map<String, dynamic>;
+    final mainFile = l10nFiles
+        .firstWhere((file) => file.path.endsWith('_$mainLanguageCode.arb'));
 
-    final languageCode = _extractLocale(targetFilePath);
+    final mainContent =
+        jsonDecode(mainFile.readAsStringSync()) as Map<String, dynamic>;
 
-    final entriesToTranslate = targetContent.entries
-        .where(
-          (copy) => copy.value == referenceContent[copy.key],
-        )
-        .toList();
+    for (final l10nFile in l10nFiles) {
+      if (l10nFile == mainFile) continue;
 
-    if (entriesToTranslate.isEmpty) {
-      _logger.success('Nothing to translate');
-      return;
+      final l10nFilePath = l10nFile.path;
+      final l10nFileContent =
+          jsonDecode(l10nFile.readAsStringSync()) as Map<String, dynamic>;
+      final languageCode = _extractLocale(l10nFilePath);
+
+      final entriesToTranslate = l10nFileContent.entries
+          .where(
+            (copy) => copy.value == mainContent[copy.key],
+          )
+          .toList();
+
+      if (entriesToTranslate.isEmpty) {
+        _logger.alert('Nothing to translate on $l10nFilePath');
+        continue;
+      }
+
+      const separator = '||';
+      final copiesToTranslate =
+          entriesToTranslate.map((entry) => entry.value).join(separator);
+
+      final translations = await _getTranslations(
+        copiesToTranslate,
+        mainLanguageCode,
+        languageCode,
+      );
+      final translationsList = translations.split(separator);
+
+      for (var i = 0; i < entriesToTranslate.length; i++) {
+        l10nFileContent[entriesToTranslate[i].key] = translationsList[i].trim();
+      }
+
+      const encoder = JsonEncoder.withIndent('  ');
+      final jsonString = encoder.convert(l10nFileContent);
+
+      File(l10nFilePath).writeAsStringSync(
+        jsonString,
+        flush: true,
+      );
+
+      _logger.success('Translations replaced successfully in "$l10nFilePath" '
+          'for language "$languageCode"');
     }
-
-    final copiesToTranslate =
-        entriesToTranslate.map((entry) => entry.value).join('||');
-    final translations =
-        await _getTranslations(copiesToTranslate, languageCode);
-    final translationsList = translations.split('||');
-
-    for (var i = 0; i < entriesToTranslate.length; i++) {
-      targetContent[entriesToTranslate[i].key] = translationsList[i].trim();
-    }
-
-    const encoder = JsonEncoder.withIndent('  ');
-    final jsonString = encoder.convert(targetContent);
-
-    File(targetFilePath).writeAsStringSync(
-      jsonString,
-      flush: true,
-    );
-
-    _logger.success('Translations replaced successfully in "$targetFilePath" '
-        'for language "$languageCode"');
   }
 
   Future<String> _getTranslations(
     String copies,
+    String mainLanguage,
     String targetLanguage,
   ) async {
-    final prompt = 'Translate the following text to '
+    final prompt = 'Translate the following text from "$mainLanguage" to '
         '"$targetLanguage" and return only the translated text, '
         'maintaining the same order and separating each translation '
         'with "||":\n\n$copies';
@@ -123,17 +157,17 @@ class TranslateCommand extends Command<int> {
     final regex = RegExp(r'_(\w{2})(?:_(\w{2}))?\.arb$');
     final match = regex.firstMatch(filePath);
 
-    if (match != null) {
-      final languageCode = match.group(1);
-      final countryCode = match.group(2);
-
-      if (countryCode != null) {
-        return '${languageCode}_$countryCode';
-      } else {
-        return languageCode.toString();
-      }
+    if (match == null) {
+      return '';
     }
 
-    return '';
+    final languageCode = match.group(1);
+    final countryCode = match.group(2);
+
+    if (countryCode == null) {
+      return languageCode.toString();
+    }
+
+    return '${languageCode}_$countryCode';
   }
 }
