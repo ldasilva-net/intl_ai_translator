@@ -1,15 +1,17 @@
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:cli_completion/cli_completion.dart';
-import 'commands/commands.dart';
-import 'version.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:pub_updater/pub_updater.dart';
+
+import 'commands/commands.dart';
+import 'version.dart';
 
 const executableName = 'intl_ai_translator';
 const packageName = 'intl_ai_translator';
 const description =
-    'A CLI tool that uses AI to automatically translate text copies for Dart applications utilizing the intl library';
+    'A CLI tool that uses AI to automatically translate text copies'
+    ' for Dart applications utilizing the intl library';
 
 /// {@template intl_ai_translator_command_runner}
 /// A [CommandRunner] for the CLI.
@@ -40,8 +42,7 @@ class IntlAiTranslatorCommandRunner extends CompletionCommandRunner<int> {
       );
 
     // Add sub commands
-    addCommand(SampleCommand(logger: _logger));
-    addCommand(UpdateCommand(logger: _logger, pubUpdater: _pubUpdater));
+    addCommand(TranslateCommand(logger: _logger));
   }
 
   @override

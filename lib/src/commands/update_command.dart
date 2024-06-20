@@ -1,10 +1,11 @@
 import 'dart:io';
 
 import 'package:args/command_runner.dart';
-import '../command_runner.dart';
-import '../version.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:pub_updater/pub_updater.dart';
+
+import '../command_runner.dart';
+import '../version.dart';
 
 /// {@template update_command}
 /// A command which updates the CLI.
