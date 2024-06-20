@@ -1,4 +1,4 @@
-## intl_ai_translator
+## Dart intl AI Translator
 
 [![style: very good analysis][very_good_analysis_badge]][very_good_analysis_link]
 [![License: BSD 3][license_badge]][license_link]
