@@ -12,13 +12,7 @@ A CLI tool that uses AI to automatically translate text copies for Dart applicat
 
 ## Getting Started 🚀
 
-If the CLI application is available on [pub](https://pub.dev), activate globally via:
-
-```sh
-dart pub global activate intl_ai_translator
-```
-
-Or locally via:
+Activate globally via:
 
 ```sh
 dart pub global activate --source=path <path to this package>
@@ -27,11 +21,8 @@ dart pub global activate --source=path <path to this package>
 ## Usage
 
 ```sh
-# Sample command
-$ intl_ai_translator sample
-
-# Sample command option
-$ intl_ai_translator sample --cyan
+# Translate command option
+$ intl_ai_translator translate --l10n-path example/l10n --main-lang en --api-key <GEMINI_API_KEY>
 
 # Show CLI version
 $ intl_ai_translator --version
